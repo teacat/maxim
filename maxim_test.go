@@ -1,16 +1,39 @@
 package maxim
 
 import (
-	"log"
+	"net"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPing(t *testing.T) {
-	m := New(WithMessageHandler(xx))
+	assert := assert.New(t)
 
-	http.HandleFunc("/ws/", m.Handler)
+	done := make(chan string)
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	m := NewDefault()
+	m.HandleMessage(func(s *Session, msg string) {
+		done <- msg
+	})
+	http.HandleFunc("/ws", m.HandleRequest)
 
+	go func() {
+		l, err := net.Listen("tcp", ":8080")
+		assert.NoError(err)
+
+		err = http.Serve(l, nil)
+		assert.NoError(err)
+	}()
+
+	c, _, err := NewClient(&ClientConfig{
+		Address: "ws://localhost:8080/ws",
+	})
+	assert.NoError(err)
+
+	err = c.Write("foo")
+	assert.NoError(err)
+
+	assert.Equal("foo", <-done)
 }

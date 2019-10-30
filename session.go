@@ -138,6 +138,10 @@ func (s *Session) Close() error {
 		return ErrSessionClosed
 	}
 	s.isClosed = true
+	err := s.conn.WriteControl(int(websocket.CloseMessage), []byte(``), time.Now().Add(s.engine.config.WriteWait))
+	if err != nil {
+		return err
+	}
 	return s.conn.Close()
 }
 
@@ -164,18 +168,12 @@ func (s *Session) Delete(k string) error {
 // Write 能透將文字訊息寫入到客戶端中。
 func (s *Session) Write(msg string) error {
 	err := s.conn.WriteMessage(int(websocket.TextMessage), []byte(msg))
-	if err == nil {
-		s.engine.handler.SentMessage(s, msg)
-	}
 	return err
 }
 
 // WriteBinary 能透將二進制訊息寫入到客戶端中。
 func (s *Session) WriteBinary(msg []byte) error {
 	err := s.conn.WriteMessage(int(websocket.BinaryMessage), msg)
-	if err == nil {
-		s.engine.handler.SentMessageBinary(s, msg)
-	}
 	return err
 }
 

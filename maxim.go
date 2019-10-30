@@ -9,14 +9,14 @@ import (
 )
 
 var (
-	ErrEngineClosed     = errors.New("junipero: upgrading connections when engine closed")
-	ErrSessionTimedOut  = errors.New("junipero: interacting with a timed out session")
-	ErrConnectionClosed = errors.New("junipero: interacting with a disconnected connection")
-	ErrSessionClosed    = errors.New("junipero: interacting with a closed session")
-	ErrKeyNotFound      = errors.New("junipero: accessing a undefined key from the session store")
-	ErrWriteTimedOut    = errors.New("junipero: write timed out")
-	ErrSessionExists    = errors.New("junipero: write timed out")
-	ErrSessionNotFound  = errors.New("junipero: write timed out")
+	ErrEngineClosed     = errors.New("maxim: upgrading connections when engine closed")
+	ErrSessionTimedOut  = errors.New("maxim: interacting with a timed out session")
+	ErrConnectionClosed = errors.New("maxim: interacting with a disconnected connection")
+	ErrSessionClosed    = errors.New("maxim: interacting with a closed session")
+	ErrKeyNotFound      = errors.New("maxim: accessing a undefined key from the session store")
+	ErrWriteTimedOut    = errors.New("maxim: write timed out")
+	ErrSessionExists    = errors.New("maxim: write timed out")
+	ErrSessionNotFound  = errors.New("maxim: write timed out")
 )
 
 // CloseStatus 是連線被關閉時的狀態代號。
@@ -39,8 +39,6 @@ const (
 	CloseTLSHandshake            CloseStatus = 1015
 )
 
-type EngineOption func(*Engine)
-
 // Engine 是 WebSocket 引擎。
 type Engine struct {
 	// sessions 是此引擎的所有階段連線。
@@ -54,14 +52,14 @@ type Engine struct {
 	closeHandler func(*Session, CloseStatus, string) error
 	// connectHandler
 	connectHandler func(*Session)
+	// disconnectHandler
+	disconnectHandler func(*Session)
 	// errorHandler
 	errorHandler func(*Session, error)
 	// messageHandler
 	messageHandler func(*Session, string)
 	// messageBinaryHandler
 	messageBinaryHandler func(*Session, []byte)
-	// pingHandler
-	pingHandler func(*Session)
 	// pongHandler
 	pongHandler func(*Session)
 	// requestHandler
@@ -84,79 +82,17 @@ type EngineConfig struct {
 	Upgrader *websocket.Upgrader
 }
 
-// WithCloseHandler
-func WithCloseHandler(h func(*Session, CloseStatus, string) error) EngineOption {
-	return func(e *Engine) {
-		e.closeHandler = h
-	}
-}
-
-// WithConnectHandler
-func WithConnectHandler(h func(*Session)) EngineOption {
-	return func(e *Engine) {
-		e.connectHandler = h
-	}
-}
-
-// WithErrorHandler
-func WithErrorHandler(h func(*Session, error)) EngineOption {
-	return func(e *Engine) {
-		e.errorHandler = h
-	}
-}
-
-// WithMessageHandler
-func WithMessageHandler(h func(*Session, string)) EngineOption {
-	return func(e *Engine) {
-		e.messageHandler = h
-	}
-}
-
-// WithMessageBinaryHandler
-func WithMessageBinaryHandler(h func(*Session, []byte)) EngineOption {
-	return func(e *Engine) {
-		e.messageBinaryHandler = h
-	}
-}
-
-// WithPingHandler
-func WithPingHandler(h func(*Session)) EngineOption {
-	return func(e *Engine) {
-		e.pingHandler = h
-	}
-}
-
-// WithPongHandler
-func WithPongHandler(h func(*Session)) EngineOption {
-	return func(e *Engine) {
-		e.pongHandler = h
-	}
-}
-
-// WithRequestHandler
-func WithRequestHandler(h func(http.ResponseWriter, *http.Request, *Session)) EngineOption {
-	return func(e *Engine) {
-		e.requestHandler = h
-	}
-}
-
-// WithConfig
-func WithConfig(conf *EngineConfig) EngineOption {
-	return func(e *Engine) {
-		e.config = conf
-	}
-}
-
-// NewServer 會建立一個新的 WebSocket 伺服器。
-func NewServer(options ...EngineOption) *Engine {
-	e := &Engine{
-		config:   DefaultConfig(),
+// New 會建立一個新的 WebSocket 伺服器。
+func New(conf *EngineConfig) *Engine {
+	return &Engine{
+		config:   conf,
 		sessions: make(map[int]*Session),
 	}
-	for _, v := range options {
-		v(e)
-	}
-	return e
+}
+
+// NewDefault 會初始化一個帶有預設設置的引擎。
+func NewDefault() *Engine {
+	return New(DefaultConfig())
 }
 
 // DefaultConfig 會回傳一個新的預設引擎設置。
@@ -174,66 +110,104 @@ func DefaultConfig() *EngineConfig {
 	}
 }
 
-// Handler 是用以傳入 HTTP 伺服器協助升級與接收 WebSocket 相關資訊的最重要函式。
-func (e *Engine) Handler() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if e.isClosed {
-			panic(ErrEngineClosed)
+// HandleMessage
+func (e *Engine) HandleMessage(h func(*Session, string)) {
+	e.messageHandler = h
+}
+
+// HandleMessageBinary
+func (e *Engine) HandleMessageBinary(h func(*Session, []byte)) {
+	e.messageBinaryHandler = h
+}
+
+// HandleError
+func (e *Engine) HandleError(h func(*Session, error)) {
+	e.errorHandler = h
+}
+
+// HandleClose
+func (e *Engine) HandleClose(h func(*Session, CloseStatus, string) error) {
+	e.closeHandler = h
+}
+
+// HandleDisconnect
+func (e *Engine) HandleDisconnect(h func(*Session)) {
+	e.disconnectHandler = h
+}
+
+// HandleConnect
+func (e *Engine) HandleConnect(h func(*Session)) {
+	e.connectHandler = h
+}
+
+// HandleRequest 是用以傳入 HTTP 伺服器協助升級與接收 WebSocket 相關資訊的最重要函式。
+func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
+	if e.isClosed {
+		panic(ErrEngineClosed)
+	}
+	c, err := e.config.Upgrader.Upgrade(w, r, nil)
+	s := e.NewSession(c)
+	if err != nil {
+		if e.errorHandler != nil {
+			e.errorHandler(s, err)
 		}
-		c, err := e.config.Upgrader.Upgrade(w, r, nil)
-		s := e.NewSession(c)
+		return
+	}
+	if e.requestHandler != nil {
+		e.requestHandler(w, r, s)
+	}
+
+	c.SetPongHandler(func(m string) error {
+		if e.pongHandler != nil {
+			e.pongHandler(s)
+		}
+		return nil
+	})
+	c.SetCloseHandler(func(code int, msg string) error {
+		if e.closeHandler != nil {
+			e.closeHandler(s, CloseStatus(code), msg)
+		}
+		s.Close()
+
+		if CloseStatus(code) == CloseNormalClosure {
+			if e.disconnectHandler != nil {
+				e.disconnectHandler(s)
+			}
+		}
+		return nil
+	})
+
+	if e.connectHandler != nil {
+		e.connectHandler(s)
+	}
+
+	defer func() {
+		// close handler?
+		s.Close()
+	}()
+
+	for {
+		typ, msg, err := c.ReadMessage()
 		if err != nil {
-			if e.errorHandler != nil {
-				e.errorHandler(s, err)
-			}
-			return
-		}
-		if e.requestHandler != nil {
-			e.requestHandler(w, r, s)
-		}
-
-		c.SetPingHandler(func(m string) error {
-			e.handler.Ping(s)
-			s.Pong()
-			return nil
-		})
-		c.SetPongHandler(func(m string) error {
-			e.handler.Pong(s)
-			return nil
-		})
-		c.SetCloseHandler(func(code int, msg string) error {
-			s.Close()
-			e.handler.Close(s, CloseStatus(code), msg)
-			if CloseStatus(code) == CloseNormalClosure {
-				e.handler.Disconnect(s)
-			}
-			return nil
-		})
-
-		e.handler.Connect(s)
-
-		defer func() {
-			// close handler?
-			s.Close()
-		}()
-
-		for {
-			typ, msg, err := c.ReadMessage()
-			if err != nil {
-				if !s.isClosed {
-					s.Close()
-					e.handler.Error(s, err)
+			if !s.isClosed {
+				s.Close()
+				if e.errorHandler != nil {
+					e.errorHandler(s, err)
 				}
-				break
 			}
-			switch typ {
-			case websocket.TextMessage:
-				e.handler.Message(s, string(msg))
-				break
-			case websocket.BinaryMessage:
-				e.handler.MessageBinary(s, msg)
-				break
+			break
+		}
+		switch typ {
+		case websocket.TextMessage:
+			if e.messageHandler != nil {
+				e.messageHandler(s, string(msg))
 			}
+			break
+		case websocket.BinaryMessage:
+			if e.messageBinaryHandler != nil {
+				e.messageBinaryHandler(s, msg)
+			}
+			break
 		}
 	}
 }
