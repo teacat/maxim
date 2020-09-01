@@ -16,7 +16,11 @@ func main() {
 		log.Printf("connected: %+v", s)
 		for {
 			<-time.After(time.Second * 1)
-			s.Ping()
+			log.Printf("ping: %+v", s)
+			err := s.Ping()
+			if err != nil {
+				panic(err)
+			}
 		}
 	})
 

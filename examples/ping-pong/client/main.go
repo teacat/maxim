@@ -9,17 +9,11 @@ import (
 func main() {
 	log.Println("Running...")
 
-	c, _, err := maxim.NewClient(&maxim.ClientConfig{
+	_, _, err := maxim.NewClient(&maxim.ClientConfig{
 		Address: "ws://localhost:8080/ws",
 	})
 	if err != nil {
 		panic(err)
 	}
-	for {
-		msg, err := c.Read()
-		if err != nil {
-			panic(err)
-		}
-		log.Println("received: " + msg)
-	}
+	select {}
 }
