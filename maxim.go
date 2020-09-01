@@ -43,6 +43,22 @@ const (
 	CloseTLSHandshake            CloseStatus = 1015
 )
 
+// Handler 是一個引擎的處理界面。
+type Handler interface {
+	// HandleMessage 會將傳入的函式作為收到字串訊息時的處理函式。
+	HandleMessage(*Session, string)
+	// HandleMessageBinary 會將傳入的函式作為收到二進制訊息時的處理函式。
+	HandleMessageBinary(*Session, []byte)
+	// HandleError 會將傳入的函式作為發生錯誤時的處理函式。
+	HandleError(*Session, error)
+	// HandleClose 會將傳入的函式作為連線關閉時的處理函式，無論連線是怎麼關閉都會呼叫此函式。
+	HandleClose(*Session, CloseStatus, string) error
+	// HandleDisconnect 會將傳入的函式作為正常連線關閉時的處理函式。
+	HandleDisconnect(*Session)
+	// HandleConnect 會將傳入的函式作為連線建立時的處理函式。
+	HandleConnect(*Session)
+}
+
 // Engine 是 WebSocket 引擎。
 type Engine struct {
 	// sessions 是此引擎的所有階段連線。
@@ -114,6 +130,16 @@ func DefaultConfig() *EngineConfig {
 	}
 }
 
+// Handle 能夠接收一個處理界面，用來處理所有動作。這會覆蓋先前指定的 `HandleMessage`…等所指定的處理函式。
+func (e *Engine) Handle(h Handler) {
+	e.HandleMessage(h.HandleMessage)
+	e.HandleMessageBinary(h.HandleMessageBinary)
+	e.HandleError(h.HandleError)
+	e.HandleClose(h.HandleClose)
+	e.HandleDisconnect(h.HandleDisconnect)
+	e.HandleConnect(h.HandleConnect)
+}
+
 // HandleMessage 會將傳入的函式作為收到字串訊息時的處理函式。
 func (e *Engine) HandleMessage(h func(*Session, string)) {
 	e.messageHandler = h
@@ -150,7 +176,7 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 		panic(ErrEngineClosed)
 	}
 	c, err := e.config.Upgrader.Upgrade(w, r, nil)
-	s := e.NewSession(c)
+	s := e.newSession(c)
 	if err != nil {
 		if e.errorHandler != nil {
 			e.errorHandler(s, err)
@@ -160,13 +186,6 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	if e.requestHandler != nil {
 		e.requestHandler(w, r, s)
 	}
-
-	c.SetPongHandler(func(m string) error {
-		if e.pongHandler != nil {
-			e.pongHandler(s)
-		}
-		return nil
-	})
 	c.SetCloseHandler(func(code int, msg string) error {
 		if e.closeHandler != nil {
 			e.closeHandler(s, CloseStatus(code), msg)
@@ -186,7 +205,6 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer func() {
-		// close handler?
 		s.Close()
 	}()
 
@@ -206,12 +224,10 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 			if e.messageHandler != nil {
 				e.messageHandler(s, string(msg))
 			}
-			break
 		case websocket.BinaryMessage:
 			if e.messageBinaryHandler != nil {
 				e.messageBinaryHandler(s, msg)
 			}
-			break
 		}
 	}
 }
