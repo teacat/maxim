@@ -5,8 +5,6 @@ import (
 	"net"
 	"net/http"
 
-	"time"
-
 	"github.com/teacat/maxim"
 )
 
@@ -14,14 +12,16 @@ func main() {
 	m := maxim.NewDefault()
 	m.HandleConnect(func(s *maxim.Session) {
 		log.Printf("connected: %+v", s)
-		for {
-			<-time.After(time.Second * 1)
-			log.Printf("ping: %+v", s)
-			err := s.Ping()
-			if err != nil {
-				panic(err)
-			}
-		}
+	})
+	m.HandleClose(func(s *maxim.Session, status maxim.CloseStatus, msg string) error {
+		log.Printf("closed: %+v, %+v, %+v", s, status, msg)
+		return nil
+	})
+	m.HandleDisconnect(func(s *maxim.Session) {
+		log.Printf("disconnected: %+v", s)
+	})
+	m.HandleError(func(s *maxim.Session, err error) {
+		log.Printf("error: %+v, %+v", s, err)
 	})
 
 	log.Println("Running...")
