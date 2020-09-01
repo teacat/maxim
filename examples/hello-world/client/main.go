@@ -23,5 +23,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	log.Println(msg)
+	log.Println("received: " + msg)
 }

@@ -11,7 +11,7 @@ import (
 func main() {
 	m := maxim.NewDefault()
 	m.HandleMessage(func(s *maxim.Session, msg string) {
-		log.Println(msg)
+		log.Println("reveived: " + msg)
 		s.Write(msg + ", world")
 	})
 
