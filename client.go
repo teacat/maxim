@@ -1,6 +1,7 @@
 package maxim
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -40,7 +41,23 @@ func NewClient(conf *ClientConfig) (*Client, *http.Response, error) {
 		config: conf,
 		conn:   conn,
 	}
+	go client.listener()
 	return client, resp, nil
+}
+
+// listener 會持續監聽一些額外的訊息並自動回應。
+func (c *Client) listener() {
+	for {
+		typ, msg, err := c.readAll()
+		if err != nil {
+			return
+		}
+		switch typ {
+		case websocket.PingMessage:
+			log.Printf("received PING!!! %v", msg)
+			c.conn.WriteControl(websocket.PongMessage, msg, time.Now().Add(c.config.WriteWait))
+		}
+	}
 }
 
 // readAll 會阻塞程式直到有訊息為止，
@@ -53,6 +70,7 @@ func (c *Client) readAll() (int, []byte, error) {
 	if err != nil {
 		return typ, msg, err
 	}
+	log.Printf("%+v, %+v, %+v\n", typ, msg, err)
 	return typ, msg, nil
 }
 
@@ -115,14 +133,6 @@ func (c *Client) WriteBinary(msg []byte) error {
 		return ErrClientClosed
 	}
 	return c.conn.WriteMessage(websocket.BinaryMessage, msg)
-}
-
-// Ping 能夠發送 Ping 至伺服端並且等待 Pong 回應，
-func (c *Client) Ping() error {
-	if c.isClosed {
-		return ErrClientClosed
-	}
-	return c.conn.WriteControl(websocket.PingMessage, []byte(``), time.Now().Add(c.config.WriteWait))
 }
 
 // IsClosed 會表示該連線是否已經關閉並結束了。
