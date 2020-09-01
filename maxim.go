@@ -2,6 +2,7 @@ package maxim
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -120,7 +121,7 @@ func DefaultConfig() *EngineConfig {
 	return &EngineConfig{
 		WriteWait:      time.Second * 10,
 		PongWait:       time.Second * 10,
-		PingPeriod:     time.Second * 20,
+		PingPeriod:     time.Second * 1,
 		MaxMessageSize: 10 * 1024 * 1024,
 		Upgrader: &websocket.Upgrader{
 			HandshakeTimeout: 30 * time.Second,
@@ -204,8 +205,21 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 		e.connectHandler(s)
 	}
 
+	ticker := time.NewTicker(e.config.PingPeriod)
+
 	defer func() {
+		ticker.Stop()
 		s.Close()
+	}()
+
+	go func() {
+		for {
+			<-ticker.C
+			log.Printf("ping!")
+			if s.Ping() != nil {
+				s.Close()
+			}
+		}
 	}()
 
 	for {
