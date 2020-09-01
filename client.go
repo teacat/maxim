@@ -1,7 +1,6 @@
 package maxim
 
 import (
-	"log"
 	"net/http"
 	"time"
 
@@ -41,45 +40,67 @@ func NewClient(conf *ClientConfig) (*Client, *http.Response, error) {
 	if err != nil {
 		return nil, resp, err
 	}
+	conn.SetPingHandler(func(h string) error {
+		return conn.WriteControl(websocket.PongMessage, []byte(``), time.Now().Add(conf.WriteWait))
+	})
 	client := &Client{
 		config: conf,
 		conn:   conn,
 	}
-
-	go client.listener()
 	return client, resp, nil
 }
 
-// HandleMessage 會將傳入的函式作為收到字串訊息時的處理函式。
-func (c *Client) HandleMessage(h func(*Client, string)) {
-	c.messageHandler = h
+// ReadAll 會阻塞程式直到有訊息為止，這會接收到所有文字或二進制訊息。
+//
+// 注意：同時間 ReadAll、Read、ReadBinary 只能使用一個消化訊息。
+func (c *Client) ReadAll() (int, []byte, error) {
+	if c.isClosed {
+		return 0, []byte(``), ErrClientClosed
+	}
+	typ, msg, err := c.conn.ReadMessage()
+	if err != nil {
+		return typ, msg, err
+	}
+	return typ, msg, nil
 }
 
-// HandleMessageBinary 會將傳入的函式作為收到二進制訊息時的處理函式。
-func (c *Client) HandleMessageBinary(h func(*Client, []byte)) {
-	c.messageBinaryHandler = h
-}
-
-// listener 會持續監聽一些額外的訊息並自動回應。
-func (c *Client) listener() {
+// ReadMessage 會阻塞程式直到有訊息為止，接收到的訊息會 `string` 字串標準訊息。
+// 任何系統訊息像是 Ping-Pong 與 Close 都不會出現在這裡。
+//
+// 注意：同時間 ReadAll、Read、ReadBinary 只能使用一個消化訊息。
+func (c *Client) Read() (string, error) {
+	if c.isClosed {
+		return "", ErrClientClosed
+	}
 	for {
-		if c.isClosed {
-			break
-		}
-		typ, msg, err := c.conn.ReadMessage()
+		typ, msg, err := c.ReadAll()
 		if err != nil {
-			return
+			return "", err
 		}
+		if typ != websocket.TextMessage {
+			continue
+		}
+		return string(msg), nil
+	}
+}
 
-		switch typ {
-		case websocket.TextMessage:
-			c.messageHandler(c, string(msg))
-		case websocket.BinaryMessage:
-			c.messageBinaryHandler(c, msg)
-		case websocket.PingMessage:
-			log.Printf("received PING!!! %v", msg)
-			c.conn.WriteControl(websocket.PongMessage, msg, time.Now().Add(c.config.WriteWait))
+// ReadBinary 會阻塞程式直到有訊息為止，接收到的訊息會是 `[]byte` 二進制標準訊息。
+// 任何系統訊息像是 Ping-Pong 與 Close 都不會出現在這裡。
+//
+// 注意：同時間 ReadAll、Read、ReadBinary 只能使用一個消化訊息。
+func (c *Client) ReadBinary() ([]byte, error) {
+	if c.isClosed {
+		return []byte(``), ErrClientClosed
+	}
+	for {
+		typ, msg, err := c.ReadAll()
+		if err != nil {
+			return []byte(``), err
 		}
+		if typ != websocket.BinaryMessage {
+			continue
+		}
+		return msg, nil
 	}
 }
 
