@@ -118,9 +118,9 @@ func NewDefault() *Engine {
 // DefaultConfig 會回傳一個新的預設引擎設置。
 func DefaultConfig() *EngineConfig {
 	return &EngineConfig{
-		WriteWait:      30,
-		PongWait:       10,
-		PingPeriod:     20,
+		WriteWait:      time.Second * 10,
+		PongWait:       time.Second * 10,
+		PingPeriod:     time.Second * 20,
 		MaxMessageSize: 10 * 1024 * 1024,
 		Upgrader: &websocket.Upgrader{
 			HandshakeTimeout: 30 * time.Second,
