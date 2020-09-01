@@ -18,8 +18,8 @@ type Session struct {
 	engine *Engine
 }
 
-// NewSession 會在引擎中建立一個新的客戶端階段。
-func (e *Engine) NewSession(conn *websocket.Conn) *Session {
+// newSession 會在引擎中建立一個新的客戶端階段。
+func (e *Engine) newSession(conn *websocket.Conn) *Session {
 	return &Session{
 		store:  make(map[string]interface{}),
 		conn:   conn,
