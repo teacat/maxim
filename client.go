@@ -47,7 +47,7 @@ func NewClient(conf *ClientConfig) (*Client, *http.Response, error) {
 // 這會接收到所有訊息像是 Ping-Pong 與 Close 或標準的文字甚至二進制訊息。
 func (c *Client) readAll() (int, []byte, error) {
 	if c.isClosed {
-		return 0, []byte(``), ErrConnectionClosed
+		return 0, []byte(``), ErrClientClosed
 	}
 	typ, msg, err := c.conn.ReadMessage()
 	if err != nil {
@@ -60,7 +60,7 @@ func (c *Client) readAll() (int, []byte, error) {
 // 任何系統訊息像是 Ping-Pong 與 Close 都不會出現在這裡。
 func (c *Client) Read() (string, error) {
 	if c.isClosed {
-		return "", ErrConnectionClosed
+		return "", ErrClientClosed
 	}
 	for {
 		typ, msg, err := c.readAll()
@@ -78,7 +78,7 @@ func (c *Client) Read() (string, error) {
 // 任何系統訊息像是 Ping-Pong 與 Close 都不會出現在這裡。
 func (c *Client) ReadBinary() ([]byte, error) {
 	if c.isClosed {
-		return []byte(``), ErrConnectionClosed
+		return []byte(``), ErrClientClosed
 	}
 	for {
 		typ, msg, err := c.readAll()
@@ -95,7 +95,7 @@ func (c *Client) ReadBinary() ([]byte, error) {
 // Close 會依照正常手續告訴伺服器關閉並結束客戶端連線。
 func (c *Client) Close() error {
 	if c.isClosed {
-		return ErrConnectionClosed
+		return ErrClientClosed
 	}
 	c.isClosed = true
 	return c.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Now().Add(c.config.WriteWait))
@@ -104,7 +104,7 @@ func (c *Client) Close() error {
 // Write 能夠傳送文字訊息至伺服端。
 func (c *Client) Write(msg string) error {
 	if c.isClosed {
-		return ErrConnectionClosed
+		return ErrClientClosed
 	}
 	return c.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 }
@@ -112,7 +112,7 @@ func (c *Client) Write(msg string) error {
 // WriteBinary 能夠傳送二進制訊息至伺服端。
 func (c *Client) WriteBinary(msg []byte) error {
 	if c.isClosed {
-		return ErrConnectionClosed
+		return ErrClientClosed
 	}
 	return c.conn.WriteMessage(websocket.BinaryMessage, msg)
 }
@@ -120,7 +120,7 @@ func (c *Client) WriteBinary(msg []byte) error {
 // Ping 能夠發送 Ping 至伺服端並且等待 Pong 回應，
 func (c *Client) Ping() error {
 	if c.isClosed {
-		return ErrConnectionClosed
+		return ErrClientClosed
 	}
 	return c.conn.WriteControl(websocket.PingMessage, []byte(``), time.Now().Add(c.config.WriteWait))
 }

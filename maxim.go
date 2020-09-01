@@ -9,14 +9,18 @@ import (
 )
 
 var (
-	ErrEngineClosed     = errors.New("maxim: upgrading connections when engine closed")
-	ErrSessionTimedOut  = errors.New("maxim: interacting with a timed out session")
-	ErrConnectionClosed = errors.New("maxim: interacting with a disconnected connection")
-	ErrSessionClosed    = errors.New("maxim: interacting with a closed session")
-	ErrKeyNotFound      = errors.New("maxim: accessing a undefined key from the session store")
-	ErrWriteTimedOut    = errors.New("maxim: write timed out")
-	ErrSessionExists    = errors.New("maxim: write timed out")
-	ErrSessionNotFound  = errors.New("maxim: write timed out")
+	// ErrEngineClosed 表示引擎已經關閉了，但卻要繼續升級新的連線。
+	ErrEngineClosed = errors.New("maxim: 引擎已經關閉而導致無法升級連線")
+	// ErrClientClosed 表示客戶端已經與遠端引擎結束連線，但卻仍要繼續執行操作。
+	ErrClientClosed = errors.New("maxim: 客戶端已經關閉連線但卻繼續操作")
+	// ErrSessionClosed 表示正在跟已經結束連線的階段進行互動。
+	ErrSessionClosed = errors.New("maxim: 連線階段已經關閉連線但卻繼續操作")
+	// ErrKeyNotFound 表示無法在連線階段的存儲空間中找到指定的鍵值資料。
+	ErrKeyNotFound = errors.New("maxim: 無法在連線階段中找到指定鍵值資料")
+	// ErrDuplicatedSession 表示水桶裡已經有相同的階段了。
+	ErrDuplicatedSession = errors.New("maxim: 欲在指定水桶中放入重複的連線階段")
+	// ErrSessionNotFound 表示刪除一個水桶裡不存在的連線階段。
+	ErrSessionNotFound = errors.New("maxim: 找不到指定的連線階段")
 )
 
 // CloseStatus 是連線被關閉時的狀態代號。
@@ -48,21 +52,21 @@ type Engine struct {
 	// isClosed 表示此引擎是否已經被中止。
 	isClosed bool
 
-	// closeHandler
+	// closeHandler 是連線關閉時的處理函式，無論連線是怎麼關閉都會呼叫此函式。
 	closeHandler func(*Session, CloseStatus, string) error
-	// connectHandler
+	// connectHandler 是連線建立時的處理函式。
 	connectHandler func(*Session)
-	// disconnectHandler
+	// disconnectHandler 是正常連線關閉時的處理函式。
 	disconnectHandler func(*Session)
-	// errorHandler
+	// errorHandler 是發生錯誤時的處理函式。
 	errorHandler func(*Session, error)
-	// messageHandler
+	// messageHandler 是收到字串訊息時的處理函式。
 	messageHandler func(*Session, string)
-	// messageBinaryHandler
+	// messageBinaryHandler 是收到二進制訊息時的處理函式。
 	messageBinaryHandler func(*Session, []byte)
-	// pongHandler
+	// pongHandler 是收到 `PONG` 通知訊息的處理函式。
 	pongHandler func(*Session)
-	// requestHandler
+	// requestHandler 是每個升級請求的監聽函式，這沒辦法改變程式流程。
 	requestHandler func(http.ResponseWriter, *http.Request, *Session)
 }
 
@@ -110,32 +114,32 @@ func DefaultConfig() *EngineConfig {
 	}
 }
 
-// HandleMessage
+// HandleMessage 會將傳入的函式作為收到字串訊息時的處理函式。
 func (e *Engine) HandleMessage(h func(*Session, string)) {
 	e.messageHandler = h
 }
 
-// HandleMessageBinary
+// HandleMessageBinary 會將傳入的函式作為收到二進制訊息時的處理函式。
 func (e *Engine) HandleMessageBinary(h func(*Session, []byte)) {
 	e.messageBinaryHandler = h
 }
 
-// HandleError
+// HandleError 會將傳入的函式作為發生錯誤時的處理函式。
 func (e *Engine) HandleError(h func(*Session, error)) {
 	e.errorHandler = h
 }
 
-// HandleClose
+// HandleClose 會將傳入的函式作為連線關閉時的處理函式，無論連線是怎麼關閉都會呼叫此函式。
 func (e *Engine) HandleClose(h func(*Session, CloseStatus, string) error) {
 	e.closeHandler = h
 }
 
-// HandleDisconnect
+// HandleDisconnect 會將傳入的函式作為正常連線關閉時的處理函式。
 func (e *Engine) HandleDisconnect(h func(*Session)) {
 	e.disconnectHandler = h
 }
 
-// HandleConnect
+// HandleConnect 會將傳入的函式作為連線建立時的處理函式。
 func (e *Engine) HandleConnect(h func(*Session)) {
 	e.connectHandler = h
 }

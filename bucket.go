@@ -23,7 +23,7 @@ func NewBucket(conf *BucketConfig) *Bucket {
 func (b *Bucket) Put(s *Session) error {
 	for _, v := range b.sessions {
 		if v == s {
-			return ErrSessionExists
+			return ErrDuplicatedSession
 		}
 	}
 	b.sessions = append(b.sessions, s)
