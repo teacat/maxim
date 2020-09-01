@@ -167,23 +167,23 @@ func (s *Session) Delete(k string) error {
 
 // Write 能透將文字訊息寫入到客戶端中。
 func (s *Session) Write(msg string) error {
-	err := s.conn.WriteMessage(int(websocket.TextMessage), []byte(msg))
+	err := s.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	return err
 }
 
 // WriteBinary 能透將二進制訊息寫入到客戶端中。
 func (s *Session) WriteBinary(msg []byte) error {
-	err := s.conn.WriteMessage(int(websocket.BinaryMessage), msg)
+	err := s.conn.WriteMessage(websocket.BinaryMessage, msg)
 	return err
 }
 
 // Pong 能夠自主地回應客戶端一個 Pong 訊息，表示伺服器仍然有回應。
 func (s *Session) Pong() error {
-	return s.conn.WriteControl(int(websocket.PongMessage), []byte(``), time.Now().Add(s.engine.config.WriteWait))
+	return s.conn.WriteControl(websocket.PongMessage, []byte(``), time.Now().Add(s.engine.config.WriteWait))
 }
 
 // Ping 能夠詢問此客戶端的連線反應狀況，
 // 如果在指定時間內沒有接收到 Pong 回應則會關閉並結束此連線。
 func (s *Session) Ping() error {
-	return s.conn.WriteControl(int(websocket.PingMessage), []byte(``), time.Now().Add(s.engine.config.WriteWait))
+	return s.conn.WriteControl(websocket.PingMessage, []byte(`w`), time.Now().Add(s.engine.config.WriteWait))
 }
