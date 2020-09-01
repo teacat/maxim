@@ -185,5 +185,5 @@ func (s *Session) Pong() error {
 // Ping 能夠詢問此客戶端的連線反應狀況，
 // 如果在指定時間內沒有接收到 Pong 回應則會關閉並結束此連線。
 func (s *Session) Ping() error {
-	return s.conn.WriteControl(websocket.PingMessage, []byte(`w`), time.Now().Add(s.engine.config.WriteWait))
+	return s.conn.WriteControl(websocket.PingMessage, []byte(``), time.Now().Add(s.engine.config.WriteWait))
 }
