@@ -2,7 +2,6 @@ package maxim
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"time"
 
@@ -120,9 +119,9 @@ func NewDefault() *Engine {
 func DefaultConfig() *EngineConfig {
 	return &EngineConfig{
 		WriteWait:      time.Second * 10,
-		PongWait:       time.Second * 10,
-		PingPeriod:     time.Second * 1,
-		MaxMessageSize: 10 * 1024 * 1024,
+		PongWait:       time.Second * 60,
+		PingPeriod:     time.Second * 54,
+		MaxMessageSize: 4 * 1024 * 1024,
 		Upgrader: &websocket.Upgrader{
 			HandshakeTimeout: 30 * time.Second,
 			ReadBufferSize:   1024,
@@ -177,27 +176,21 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 		panic(ErrEngineClosed)
 	}
 	c, err := e.config.Upgrader.Upgrade(w, r, nil)
+	c.SetReadLimit(e.config.MaxMessageSize)
+	c.SetReadDeadline(time.Now().Add(e.config.PongWait))
 	s := e.newSession(c)
 	if err != nil {
-		if e.errorHandler != nil {
-			e.errorHandler(s, err)
-		}
+		s.Error(err)
 		return
 	}
 	if e.requestHandler != nil {
 		e.requestHandler(w, r, s)
 	}
 	c.SetCloseHandler(func(code int, msg string) error {
-		if e.closeHandler != nil {
-			e.closeHandler(s, CloseStatus(code), msg)
-		}
-		s.Close()
-
-		if CloseStatus(code) == CloseNormalClosure {
-			if e.disconnectHandler != nil {
-				e.disconnectHandler(s)
-			}
-		}
+		return s.Close(CloseStatus(code))
+	})
+	c.SetPongHandler(func(msg string) error {
+		c.SetReadDeadline(time.Now().Add(e.config.PongWait))
 		return nil
 	})
 
@@ -209,28 +202,29 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		ticker.Stop()
-		s.Close()
+		s.Close(CloseNormalClosure)
 	}()
 
 	go func() {
 		for {
 			<-ticker.C
-			log.Printf("ping!")
-			if s.Ping() != nil {
-				s.Close()
+			if e.isClosed || s.isClosed {
+				break
+			}
+			err := s.Ping()
+			if err != nil {
+				s.errorAndClose(err, CloseAbnormalClosure)
 			}
 		}
 	}()
 
 	for {
+		if e.isClosed || s.isClosed {
+			break
+		}
 		typ, msg, err := c.ReadMessage()
 		if err != nil {
-			if !s.isClosed {
-				s.Close()
-				if e.errorHandler != nil {
-					e.errorHandler(s, err)
-				}
-			}
+			s.errorAndClose(err, CloseAbnormalClosure)
 			break
 		}
 		switch typ {
@@ -248,10 +242,10 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 
 // Close 會關閉整個引擎並中斷所有連線。
 func (e *Engine) Close() {
-	for _, v := range e.sessions {
-		v.Close()
-	}
 	e.isClosed = true
+	for _, v := range e.sessions {
+		v.Close(CloseNormalClosure)
+	}
 }
 
 // IsClosed 會表示該引擎是否已經關閉了。
