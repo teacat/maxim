@@ -27,6 +27,12 @@ func (e *Engine) newSession(conn *websocket.Conn) *Session {
 	}
 }
 
+// errorAndClose 會在呼叫錯誤函式後進行關閉行為。
+func (s *Session) errorAndClose(err error, c CloseStatus) error {
+	s.Error(err)
+	return s.Close(c)
+}
+
 // Get 能夠從客戶端階段中取得暫存資料。
 func (s *Session) Get(k string) (v interface{}, ok bool) {
 	v, ok = s.store[k]
@@ -133,16 +139,34 @@ func (s *Session) GetTime(k string) time.Time {
 }
 
 // Close 會良好地結束與此客戶端的連線。
-func (s *Session) Close() error {
+func (s *Session) Close(c CloseStatus) error {
 	if s.isClosed {
 		return ErrSessionClosed
 	}
 	s.isClosed = true
-	err := s.conn.WriteControl(int(websocket.CloseMessage), []byte(``), time.Now().Add(s.engine.config.WriteWait))
+	err := s.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(int(c), ""), time.Now().Add(s.engine.config.WriteWait))
 	if err != nil {
 		return err
 	}
+	if s.engine.closeHandler != nil {
+		s.engine.closeHandler(s, c, "")
+	}
+	if CloseStatus(c) == CloseNormalClosure {
+		if s.engine.disconnectHandler != nil {
+			s.engine.disconnectHandler(s)
+		}
+	}
 	return s.conn.Close()
+}
+
+// Error 會呼叫錯誤處理函式並傳入此客戶階段，這並不會中斷連線。
+func (s *Session) Error(err error) {
+	if v, ok := err.(*websocket.CloseError); ok && v.Code == websocket.CloseNormalClosure {
+		return
+	}
+	if s.engine.errorHandler != nil {
+		s.engine.errorHandler(s, err)
+	}
 }
 
 // IsClosed 會表示此客戶端階段是否已經關閉連線了。
@@ -167,12 +191,14 @@ func (s *Session) Delete(k string) error {
 
 // Write 能透將文字訊息寫入到客戶端中。
 func (s *Session) Write(msg string) error {
+	s.conn.SetWriteDeadline(time.Now().Add(s.engine.config.WriteWait))
 	err := s.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 	return err
 }
 
 // WriteBinary 能透將二進制訊息寫入到客戶端中。
 func (s *Session) WriteBinary(msg []byte) error {
+	s.conn.SetWriteDeadline(time.Now().Add(s.engine.config.WriteWait))
 	err := s.conn.WriteMessage(websocket.BinaryMessage, msg)
 	return err
 }
