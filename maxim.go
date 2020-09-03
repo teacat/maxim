@@ -27,20 +27,34 @@ var (
 type CloseStatus int
 
 const (
-	CloseNormalClosure           CloseStatus = 1000
-	CloseGoingAway               CloseStatus = 1001
-	CloseProtocolError           CloseStatus = 1002
-	CloseUnsupportedData         CloseStatus = 1003
-	CloseNoStatusReceived        CloseStatus = 1005
-	CloseAbnormalClosure         CloseStatus = 1006
+	// CloseNormalClosure 表示正常關閉。
+	CloseNormalClosure CloseStatus = 1000
+	// CloseGoingAway 表示因為瀏覽器結束或是故障而離去。
+	CloseGoingAway CloseStatus = 1001
+	// CloseProtocolError 表示協定錯誤而無法連線。
+	CloseProtocolError CloseStatus = 1002
+	// CloseUnsupportedData 表示接收到無法處理的資料型態（如：文字處理函式卻接收到二進制資料）而錯誤。
+	CloseUnsupportedData CloseStatus = 1003
+	// CloseNoStatusReceived 表示沒有接收到狀態代碼。
+	CloseNoStatusReceived CloseStatus = 1005
+	// CloseAbnormalClosure 表示發生意外錯誤。
+	CloseAbnormalClosure CloseStatus = 1006
+	// CloseInvalidFramePayloadData 表示錯誤的資料幀。
 	CloseInvalidFramePayloadData CloseStatus = 1007
-	ClosePolicyViolation         CloseStatus = 1008
-	CloseMessageTooBig           CloseStatus = 1009
-	CloseMandatoryExtension      CloseStatus = 1010
-	CloseInternalServerErr       CloseStatus = 1011
-	CloseServiceRestart          CloseStatus = 1012
-	CloseTryAgainLater           CloseStatus = 1013
-	CloseTLSHandshake            CloseStatus = 1015
+	// ClosePolicyViolation 表示接收到違反原則的訊息而中止。
+	ClosePolicyViolation CloseStatus = 1008
+	// CloseMessageTooBig 表示接收的資料因過於龐大而拒絕。
+	CloseMessageTooBig CloseStatus = 1009
+	// CloseMandatoryExtension 表示伺服器必須交涉擴充功能，可能是缺少部份功能而結束。
+	CloseMandatoryExtension CloseStatus = 1010
+	// CloseInternalServerErr 表示伺服器內部發生錯誤。
+	CloseInternalServerErr CloseStatus = 1011
+	// CloseServiceRestart 表示服務為了重啟而中斷。
+	CloseServiceRestart CloseStatus = 1012
+	// CloseTryAgainLater 表示目前此連線不可能，稍後嘗試也許可行。
+	CloseTryAgainLater CloseStatus = 1013
+	// CloseTLSHandshake 表示這個連線是為了 TLS 握手協定才產生的。
+	CloseTLSHandshake CloseStatus = 1015
 )
 
 // Handler 是一個引擎的處理界面。
