@@ -97,6 +97,7 @@ func TestHandle(t *testing.T) {
 	m.Handle(h)
 
 	go func() {
+		http.DefaultServeMux = new(http.ServeMux)
 		http.HandleFunc("/ws", m.HandleRequest)
 		http.Serve(l, nil)
 	}()
