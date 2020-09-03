@@ -7,8 +7,6 @@ import (
 )
 
 func main() {
-	log.Println("Running...")
-
 	c, _, err := maxim.NewClient(&maxim.ClientConfig{
 		Address: "ws://localhost:8080/ws",
 	})
