@@ -217,25 +217,11 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 		e.connectHandler(s)
 	}
 
-	ticker := time.NewTicker(e.config.PingPeriod)
-
 	defer func() {
-		ticker.Stop()
 		s.Close(CloseNormalClosure)
 	}()
 
-	go func() {
-		for {
-			<-ticker.C
-			if e.isClosed || s.isClosed {
-				break
-			}
-			err := s.Ping()
-			if err != nil {
-				s.errorAndClose(err, CloseAbnormalClosure)
-			}
-		}
-	}()
+	go e.pingTicker(s)
 
 	for {
 		if e.isClosed || s.isClosed {
@@ -255,6 +241,21 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 			if e.messageBinaryHandler != nil {
 				e.messageBinaryHandler(s, msg)
 			}
+		}
+	}
+}
+
+// pingTicker 會每隔一段引擎設置時間去 Ping 客戶端。
+func (e *Engine) pingTicker(s *Session) {
+	ticker := time.NewTicker(e.config.PingPeriod)
+	for {
+		<-ticker.C
+		if e.isClosed || s.isClosed {
+			break
+		}
+		err := s.Ping()
+		if err != nil {
+			s.errorAndClose(err, CloseAbnormalClosure)
 		}
 	}
 }
