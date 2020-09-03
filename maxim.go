@@ -62,7 +62,7 @@ type Handler interface {
 // Engine 是 WebSocket 引擎。
 type Engine struct {
 	// sessions 是此引擎的所有階段連線。
-	sessions map[int]*Session
+	sessions *Bucket
 	// config 是引擎的設置。
 	config *EngineConfig
 	// isClosed 表示此引擎是否已經被中止。
@@ -106,7 +106,7 @@ type EngineConfig struct {
 func New(conf *EngineConfig) *Engine {
 	return &Engine{
 		config:   conf,
-		sessions: make(map[int]*Session),
+		sessions: NewBucket(&BucketConfig{}),
 	}
 }
 
@@ -183,6 +183,11 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 		s.Error(err)
 		return
 	}
+	err = e.sessions.Put(s)
+	if err != nil {
+		s.Error(err)
+		return
+	}
 	if e.requestHandler != nil {
 		e.requestHandler(w, r, s)
 	}
@@ -240,12 +245,40 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Write 能夠將文字訊息寫入到所有客戶端。
+func (e *Engine) Write(msg string) error {
+	return e.sessions.Write(msg)
+}
+
+// WriteFilter 能夠將文字訊息寫入到被篩選的客戶端。
+func (e *Engine) WriteFilter(msg string, fn func(*Session) bool) error {
+	return e.sessions.WriteFilter(msg, fn)
+}
+
+// WriteOthers 能夠將文字訊息寫入到指定以外的所有客戶端。
+func (e *Engine) WriteOthers(msg string, s *Session) error {
+	return e.sessions.WriteOthers(msg, s)
+}
+
+// WriteBinary 能夠將二進制訊息寫入到所有客戶端。
+func (e *Engine) WriteBinary(msg []byte) error {
+	return e.sessions.WriteBinary(msg)
+}
+
+// WriteBinaryFilter 能夠將二進制訊息寫入到被篩選客戶端。
+func (e *Engine) WriteBinaryFilter(msg []byte, fn func(*Session) bool) error {
+	return e.sessions.WriteBinaryFilter(msg, fn)
+}
+
+// WriteBinaryOthers 能夠將二進制訊息寫入到指定以外的所有客戶端。
+func (e *Engine) WriteBinaryOthers(msg []byte, s *Session) error {
+	return e.sessions.WriteBinaryOthers(msg, s)
+}
+
 // Close 會關閉整個引擎並中斷所有連線。
 func (e *Engine) Close() {
 	e.isClosed = true
-	for _, v := range e.sessions {
-		v.Close(CloseNormalClosure)
-	}
+	e.sessions.Close(CloseNormalClosure)
 }
 
 // IsClosed 會表示該引擎是否已經關閉了。
@@ -255,5 +288,5 @@ func (e *Engine) IsClosed() bool {
 
 // Len 會取得正在連線的客戶端總數。
 func (e *Engine) Len() int {
-	return len(e.sessions)
+	return e.sessions.Len()
 }
