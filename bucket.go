@@ -116,6 +116,13 @@ func (b *Bucket) Contains(s *Session) bool {
 	return false
 }
 
+// Close 會關閉此水桶的所有客戶端連線。
+func (b *Bucket) Close(c CloseStatus) {
+	for _, v := range b.sessions {
+		v.Close(CloseNormalClosure)
+	}
+}
+
 // Len 會表示頻道的總訂閱客戶端數量。
 func (b *Bucket) Len() int {
 	return len(b.sessions)
