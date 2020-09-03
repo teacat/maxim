@@ -8,20 +8,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPing(t *testing.T) {
+func TestWrite(t *testing.T) {
 	assert := assert.New(t)
 
-	done := make(chan string)
-
-	m := NewDefault()
-	m.HandleMessage(func(s *Session, msg string) {
-		done <- msg
-	})
-	http.HandleFunc("/ws", m.HandleRequest)
+	l, err := net.Listen("tcp", ":8080")
+	assert.NoError(err)
 
 	go func() {
-		l, err := net.Listen("tcp", ":8080")
-		assert.NoError(err)
+
+		m := NewDefault()
+		m.HandleMessage(func(s *Session, msg string) {
+			assert.Equal("Hello", msg)
+
+			err := s.Write(msg + ", world")
+			assert.NoError(err)
+
+		})
+		http.HandleFunc("/ws", m.HandleRequest)
 
 		err = http.Serve(l, nil)
 		assert.NoError(err)
@@ -32,8 +35,17 @@ func TestPing(t *testing.T) {
 	})
 	assert.NoError(err)
 
-	err = c.Write("foo")
+	err = c.Write("Hello")
 	assert.NoError(err)
 
-	assert.Equal("foo", <-done)
+	msg, err := c.Read()
+	assert.NoError(err)
+	assert.Equal("Hello, world", msg)
+
+	err = c.Close()
+	assert.NoError(err)
+
+	err = l.Close()
+	assert.NoError(err)
+
 }
