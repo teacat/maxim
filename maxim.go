@@ -261,33 +261,33 @@ func (e *Engine) pingTicker(s *Session) {
 }
 
 // Write 能夠將文字訊息寫入到所有客戶端。
-func (e *Engine) Write(msg string) error {
-	return e.sessions.Write(msg)
+func (e *Engine) Write(msg string) {
+	e.sessions.Write(msg)
 }
 
 // WriteFilter 能夠將文字訊息寫入到被篩選的客戶端。
-func (e *Engine) WriteFilter(msg string, fn func(*Session) bool) error {
-	return e.sessions.WriteFilter(msg, fn)
+func (e *Engine) WriteFilter(msg string, fn func(*Session) bool) {
+	e.sessions.WriteFilter(msg, fn)
 }
 
 // WriteOthers 能夠將文字訊息寫入到指定以外的所有客戶端。
-func (e *Engine) WriteOthers(msg string, s *Session) error {
-	return e.sessions.WriteOthers(msg, s)
+func (e *Engine) WriteOthers(msg string, s *Session) {
+	e.sessions.WriteOthers(msg, s)
 }
 
 // WriteBinary 能夠將二進制訊息寫入到所有客戶端。
-func (e *Engine) WriteBinary(msg []byte) error {
-	return e.sessions.WriteBinary(msg)
+func (e *Engine) WriteBinary(msg []byte) {
+	e.sessions.WriteBinary(msg)
 }
 
 // WriteBinaryFilter 能夠將二進制訊息寫入到被篩選客戶端。
-func (e *Engine) WriteBinaryFilter(msg []byte, fn func(*Session) bool) error {
-	return e.sessions.WriteBinaryFilter(msg, fn)
+func (e *Engine) WriteBinaryFilter(msg []byte, fn func(*Session) bool) {
+	e.sessions.WriteBinaryFilter(msg, fn)
 }
 
 // WriteBinaryOthers 能夠將二進制訊息寫入到指定以外的所有客戶端。
-func (e *Engine) WriteBinaryOthers(msg []byte, s *Session) error {
-	return e.sessions.WriteBinaryOthers(msg, s)
+func (e *Engine) WriteBinaryOthers(msg []byte, s *Session) {
+	e.sessions.WriteBinaryOthers(msg, s)
 }
 
 // Close 會關閉整個引擎並中斷所有連線。
