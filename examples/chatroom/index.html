@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+    </head>
+    <body>
+        <h1>聊天室</h1>
+        <pre></pre>
+        <input type="text" placeholder="輸入訊息…" />
+
+        <script>
+            let w = new WebSocket("ws://localhost:8080/ws");
+            let n = `訪客 #${Math.floor(Math.random() * 1000)}`;
+            let p = document.querySelector("pre");
+            let t = document.querySelector("input");
+
+            // 收到訊息時，直接輸出到 `<pre>` 標籤內部。
+            w.onmessage = msg => {
+                p.innerText += `${msg.data}\n`;
+            };
+            // 當按下 `Enter` 按鍵時毫不猶豫地直接送出訊息。
+            t.onkeydown = e => {
+                if (e.keyCode !== 13 || t.value === "") return;
+                w.send(`<${n}> ${t.value}`);
+                t.value = "";
+            };
+        </script>
+    </body>
+</html>
