@@ -37,14 +37,14 @@ $ go get github.com/teacat/maxim
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    // 監聽任何來自客戶端的文字訊息。
-    m.HandleMessage(func(s *maxim.Session, msg string) {
+	m := maxim.NewDefault()
+	// 監聽任何來自客戶端的文字訊息。
+	m.HandleMessage(func(s *maxim.Session, msg string) {
 		log.Println("已接收：" + msg)
-    })
-    // 客戶端現在可以透過 `localhost:8080/ws` 連線到 Maxim 的 WebSocket 引擎。
-    http.HandleFunc("/ws", m.HandleRequest)
-    http.ListenAndServe(":8080", nil)
+	})
+	// 客戶端現在可以透過 `localhost:8080/ws` 連線到 Maxim 的 WebSocket 引擎。
+	http.HandleFunc("/ws", m.HandleRequest)
+	http.ListenAndServe(":8080", nil)
 }
 ```
 
@@ -54,29 +54,29 @@ func main() {
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    // 文字訊息事件，收到客戶端的文字訊息就會呼叫此處理函式。
-    m.HandleMessage(func(s *maxim.Session, msg string) {
+	m := maxim.NewDefault()
+	// 文字訊息事件，收到客戶端的文字訊息就會呼叫此處理函式。
+	m.HandleMessage(func(s *maxim.Session, msg string) {
 		log.Println("收到文字訊息：" + msg)
 	})
-    // 監聽連線事件，任何客戶端一旦連線就會呼叫此處理函式。
-    m.HandleConnect(func(s *maxim.Session) {
+	// 監聽連線事件，任何客戶端一旦連線就會呼叫此處理函式。
+	m.HandleConnect(func(s *maxim.Session) {
 		log.Printf("已連線：%+v", s)
-    })
-    // 監聽連線關閉事件，只要連線關閉就會呼叫此處理函式。
+	})
+	// 監聽連線關閉事件，只要連線關閉就會呼叫此處理函式。
 	m.HandleClose(func(s *maxim.Session, status maxim.CloseStatus, msg string) error {
 		log.Printf("連線關閉：%+v, %+v, %+v", s, status, msg)
 		return nil
-    })
-    // 監聽標準離線事件，只有在連線正常表明離線才會呼叫此處理函式。
+	})
+	// 監聽標準離線事件，只有在連線正常表明離線才會呼叫此處理函式。
 	m.HandleDisconnect(func(s *maxim.Session) {
 		log.Printf("正常離線：%+v", s)
-    })
-    // 監聽錯誤事件，若連線發生錯誤就會呼叫此處理函式，異常的斷線也會。
+	})
+	// 監聽錯誤事件，若連線發生錯誤就會呼叫此處理函式，異常的斷線也會。
 	m.HandleError(func(s *maxim.Session, err error) {
 		log.Printf("錯誤：%+v, %+v", s, err)
-    })
-    // ...
+	})
+	// ...
 }
 ```
 
@@ -87,20 +87,20 @@ func main() {
 type MyWebSocketHandler struct {
 }
 
-func (h MyWebSocketHandler) HandleMessage(*Session, string) { }
-func (h MyWebSocketHandler) HandleMessageBinary(*Session, []byte) { }
-func (h MyWebSocketHandler) HandleError(*Session, error) { }
-func (h MyWebSocketHandler) HandleClose(*Session, CloseStatus, string) error { }
-func (h MyWebSocketHandler) HandleDisconnect(*Session) { }
-func (h MyWebSocketHandler) HandleConnect(*Session) { }
+func (h MyWebSocketHandler) HandleMessage(*Session, string)                  {}
+func (h MyWebSocketHandler) HandleMessageBinary(*Session, []byte)            {}
+func (h MyWebSocketHandler) HandleError(*Session, error)                     {}
+func (h MyWebSocketHandler) HandleClose(*Session, CloseStatus, string) error {}
+func (h MyWebSocketHandler) HandleDisconnect(*Session)                       {}
+func (h MyWebSocketHandler) HandleConnect(*Session)                          {}
 
 func main() {
-    m := maxim.NewDefault()
-    // 讓 MyWebSocketHandler 處理所有 WebSocket 事件
-    h := MyWebSocketHandler{}
-    m.Handle(h)
+	m := maxim.NewDefault()
+	// 讓 MyWebSocketHandler 處理所有 WebSocket 事件
+	h := MyWebSocketHandler{}
+	m.Handle(h)
 
-    // ...
+	// ...
 }
 ```
 
@@ -110,13 +110,13 @@ func main() {
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    // 監聽連線事件，任何客戶端一旦連線就會呼叫此處理函式。
-    m.HandleConnect(func(s *maxim.Session) {
-        // `s` 即是單個連線階段。
+	m := maxim.NewDefault()
+	// 監聽連線事件，任何客戶端一旦連線就會呼叫此處理函式。
+	m.HandleConnect(func(s *maxim.Session) {
+		// `s` 即是單個連線階段。
 		log.Printf("已連線：%+v", s)
-    })
-    // ...
+	})
+	// ...
 }
 ```
 
@@ -126,12 +126,12 @@ func main() {
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    m.HandleMessage(func(s *maxim.Session, msg string) {
-        // 發送文字訊息給此連線階段。
+	m := maxim.NewDefault()
+	m.HandleMessage(func(s *maxim.Session, msg string) {
+		// 發送文字訊息給此連線階段。
 		s.Write("Hello, world!")
-    })
-    // ...
+	})
+	// ...
 }
 ```
 
@@ -141,15 +141,15 @@ func main() {
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    m.HandleMessage(func(s *maxim.Session, msg string) {
-        // 在此連線階段儲存一個名為 `account` 的字串資料。
-        s.Set("account", msg)
-        // 從此連線階段中拿取名為 `account` 的字串資料。
-        // 若找不到此資料則會回傳一個空字串（零值）。
-        log.Println(s.GetString("account"))
-    })
-    // ...
+	m := maxim.NewDefault()
+	m.HandleMessage(func(s *maxim.Session, msg string) {
+		// 在此連線階段儲存一個名為 `account` 的字串資料。
+		s.Set("account", msg)
+		// 從此連線階段中拿取名為 `account` 的字串資料。
+		// 若找不到此資料則會回傳一個空字串（零值）。
+		log.Println(s.GetString("account"))
+	})
+	// ...
 }
 ```
 
@@ -159,15 +159,15 @@ func main() {
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    m.HandleError(func(s *maxim.Session, err error) {
+	m := maxim.NewDefault()
+	m.HandleError(func(s *maxim.Session, err error) {
 		log.Printf("發生錯誤：%+v, %+v", s, err)
-    })
-    m.HandleConnect(func(s *maxim.Session) {
-        // 手動呼叫錯誤處理函式。
+	})
+	m.HandleConnect(func(s *maxim.Session) {
+		// 手動呼叫錯誤處理函式。
 		s.Error(errors.New("這個連線階段發生錯誤啦！"))
 	})
-    // ...
+	// ...
 }
 ```
 
@@ -179,12 +179,12 @@ Maxim 引擎預設會自動間隔一段時間傳遞 `Ping` 至客戶端，這部
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    m.HandleConnect(func(s *maxim.Session) {
-        // 詢問客戶端是否在線上。
-        s.Ping()
+	m := maxim.NewDefault()
+	m.HandleConnect(func(s *maxim.Session) {
+		// 詢問客戶端是否在線上。
+		s.Ping()
 	})
-    // ...
+	// ...
 }
 ```
 
@@ -194,11 +194,11 @@ func main() {
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    m.HandleMessage(func(s *maxim.Session, msg string) {
-        s.Close()
-    })
-    // ...
+	m := maxim.NewDefault()
+	m.HandleMessage(func(s *maxim.Session, msg string) {
+		s.Close()
+	})
+	// ...
 }
 ```
 
@@ -210,17 +210,17 @@ func main() {
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    // 初始化一個新的連線階段水桶。
-    b := maxim.NewBucket(&maxim.BucketConfig{})
+	m := maxim.NewDefault()
+	// 初始化一個新的連線階段水桶。
+	b := maxim.NewBucket(&maxim.BucketConfig{})
 
-    // 監聽任何新的客戶端連線，並在連線之後將客戶端放入同個連線階段水桶中。
-    m.HandleConnect(func(s *maxim.Session) {
-        b.Put(s)
-        // 對水桶裡的所有連線階段客戶端發送群組訊息。
-        b.Write("Hello, everyone!")
+	// 監聽任何新的客戶端連線，並在連線之後將客戶端放入同個連線階段水桶中。
+	m.HandleConnect(func(s *maxim.Session) {
+		b.Put(s)
+		// 對水桶裡的所有連線階段客戶端發送群組訊息。
+		b.Write("Hello, everyone!")
 	})
-    // ...
+	// ...
 }
 ```
 
@@ -232,8 +232,9 @@ func main() {
 
 ```go
 func main() {
-    m := maxim.NewDefault()
-    m.Close()
+	m := maxim.NewDefault()
+	m.Close()
+}
 ```
 
 ## 客戶端
@@ -244,7 +245,7 @@ func main() {
 func main() {
 	c, _, _ := maxim.NewClient(&maxim.ClientConfig{
 		Address: "ws://localhost:8080/ws",
-    })
+	})
 }
 ```
 
@@ -256,10 +257,10 @@ func main() {
 func main() {
 	c, _, _ := maxim.NewClient(&maxim.ClientConfig{
 		Address: "ws://localhost:8080/ws",
-    })
-    // `Read` 會接收文字訊息，若要接收二進制位元組訊息請用 `ReadBinary`
-    msg, _ := c.Read()
-    log.Println("received: " + msg)
+	})
+	// `Read` 會接收文字訊息，若要接收二進制位元組訊息請用 `ReadBinary`
+	msg, _ := c.Read()
+	log.Println("received: " + msg)
 }
 ```
 
@@ -271,8 +272,8 @@ func main() {
 func main() {
 	c, _, _ := maxim.NewClient(&maxim.ClientConfig{
 		Address: "ws://localhost:8080/ws",
-    })
-    c.Write("Hello, world!")
+	})
+	c.Write("Hello, world!")
 }
 ```
 
@@ -284,7 +285,7 @@ func main() {
 func main() {
 	c, _, _ := maxim.NewClient(&maxim.ClientConfig{
 		Address: "ws://localhost:8080/ws",
-    })
-    c.Close()
+	})
+	c.Close()
 }
 ```
