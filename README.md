@@ -8,6 +8,7 @@ Golang 的 WebSocket 伺服與客戶端。
 * [使用方式](#使用方式)
     * [伺服端](#伺服端)
         * [監聽事件與訊息](#監聽事件與訊息)
+		* [廣播寫入訊息](#廣播寫入訊息)
         * [連線階段](#連線階段)
             * [寫入訊息](#寫入訊息)
             * [鍵值存儲庫](#鍵值存儲庫)
@@ -100,6 +101,21 @@ func main() {
 	h := MyWebSocketHandler{}
 	m.Handle(h)
 
+	// ...
+}
+```
+
+### 廣播寫入訊息
+
+你可以直接對引擎呼叫 `Write` 或 `WriteBinary` 來向所有客戶端寫入訊息。
+
+```go
+func main() {
+	m := maxim.NewDefault()
+	m.HandleConnect(func(_ *maxim.Session) {
+		// 注意，這是呼叫 `m` 來向所有連線階段發送訊息。
+		m.Write("有新的人加入啦！")
+	})
 	// ...
 }
 ```
