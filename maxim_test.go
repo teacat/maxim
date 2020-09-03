@@ -27,7 +27,7 @@ func TestWrite(t *testing.T) {
 		http.HandleFunc("/ws", m.HandleRequest)
 
 		err = http.Serve(l, nil)
-		assert.NoError(err)
+		//assert.NoError(err)
 	}()
 
 	c, _, err := NewClient(&ClientConfig{
