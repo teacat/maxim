@@ -13,12 +13,11 @@
         <script>
             let w = new WebSocket("ws://localhost:8080/ws");
             let n = `訪客 #${Math.floor(Math.random() * 1000)}`;
-            let p = document.querySelector("pre");
             let t = document.querySelector("input");
 
             // 收到訊息時，直接輸出到 `<pre>` 標籤內部。
             w.onmessage = msg => {
-                p.innerText += `${msg.data}\n`;
+                document.querySelector("pre").innerText += `${msg.data}\n`;
             };
             // 當按下 `Enter` 按鍵時毫不猶豫地直接送出訊息。
             t.onkeydown = e => {
