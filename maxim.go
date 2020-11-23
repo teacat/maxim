@@ -190,13 +190,14 @@ func (e *Engine) HandleRequest(w http.ResponseWriter, r *http.Request) {
 		panic(ErrEngineClosed)
 	}
 	c, err := e.config.Upgrader.Upgrade(w, r, nil)
-	c.SetReadLimit(e.config.MaxMessageSize)
-	c.SetReadDeadline(time.Now().Add(e.config.PongWait))
+	// c 可能是 nil，使用 Error 時不應該假設 conn 一定有東西
 	s := e.newSession(c)
 	if err != nil {
 		s.Error(err)
 		return
 	}
+	c.SetReadLimit(e.config.MaxMessageSize)
+	c.SetReadDeadline(time.Now().Add(e.config.PongWait))
 	err = e.sessions.Put(s)
 	if err != nil {
 		s.Error(err)
